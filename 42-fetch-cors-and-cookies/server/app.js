@@ -1,0 +1,121 @@
+const express = require("express");
+const app = express();
+//const cors = require('cors');
+const cookieParser = require("cookie-parser");
+const port = process.env.API_PORT || 5555;
+const path = require("path");
+
+//handle json body request
+app.use(express.json());
+app.use(cookieParser());
+//app.use(cors());
+
+app.get("/", (req, res) => {
+  //if nothing requested, redirect to '/index.html'
+  res.redirect("/index.html");
+});
+
+app.get("/set", (req, res) => {
+  //fetch call to add a new cookie called 'token'
+  //create the token
+  let key = "token";
+  let value = [...new Array(30)]
+    .map((item) => ((Math.random() * 36) | 0).toString(36))
+    .join("");
+  console.log("TOKEN", value);
+  //set to expire in 30 days
+  let thirtyDays = 1000 * 60 * 60 * 24 * 30; //30 days worth of milliseconds
+  res.cookie(key, value, {
+    maxAge: thirtyDays,
+    path: "/",
+    // sameSite: "Lax",
+    sameSite: "None",
+  });
+  //secure needs to be set if using https along with sameSite: 'None'. 'Lax' (default) will be there but unusable
+
+  // If using Lax with two different domains we'll get the message
+  // this set-cookie had the "SameSite=Lax" attribute but came from a
+  // cross-origin response.
+  // We have to specify that we can make a cross-origin request
+
+  // When sameSite is Lax it will exist but sits in the localhost and we
+  // be allowed to do anything with it
+  // The browser will accept it and save it, but it's on localhost, so
+  // we're not allowed to do anything with it
+  // We can only use what's available on 127.0.0.1:5555
+
+  // Webpages from localhost can access the cookie we create with the
+  // Add Token Cookie with Fetch button even though we were on a different
+  // domain, i.e., 127.0.0.1:5555 when the cookie was saved, setting
+  // sameSite as None allowed us to save the cookie
+
+  // Cookies belong to the domain on which they were set
+
+  // sameSite: strict is also an option
+
+  // Automatically handled with the cors middleware package, but we're
+  // doing it manually to see all the pieces
+
+  //CORS requires access-control-allow-origin... for fetch this needs an exact host match
+  // CORS also needs access-control-allow-credentials if it is a fetch call with credentials: 'include'
+  res.set("Access-Control-Allow-Origin", req.headers.origin); //req.headers.origin or "*" if the request's credentials mode not is "include"
+  res.set("Access-Control-Allow-Credentials", "true");
+  // access-control-expose-headers allows JS in the browser to see headers other than the default 7
+
+  // Reset this back to only being allowed to access default the 7 visible headers for CORS requests
+  res.set(
+    "Access-Control-Expose-Headers",
+    "date, etag, access-control-allow-origin, access-control-allow-credentials"
+  );
+
+  res.send({
+    message: "set-cookie header sent with maxAge of 30 days",
+  });
+});
+
+app.get("/delete/:key", (req, res) => {
+  //fetch call to delete a specific cookie
+  console.log(req.params.key);
+  let key = req.params.key;
+  //CORS requires access-control-allow-origin... for fetch this needs an exact host match
+  // CORS also needs access-control-allow-credentials if it is a fetch call with credentials: 'include'
+  res.set("Access-Control-Allow-Origin", req.headers.origin);
+  res.set("Access-Control-Allow-Credentials", "true");
+  res.set("Access-Control-Expose-Headers", "date, etag");
+  res.cookie(key, "", { maxAge: 0, path: "/", sameSite: "None" });
+  res.send({
+    message: `${key} cookie set to expire immediately`,
+  });
+});
+
+app.get("/:name", (req, res) => {
+  //index.html and other static files  route
+  console.log("fetching a static file", req.params.name);
+  let options = {
+    root: path.join(__dirname, "public"),
+    dotfiles: "deny",
+    headers: {
+      "x-timestamp": Date.now(),
+      "x-sent": true,
+      "x-from-my-public-folder": true,
+    },
+  };
+
+  var fileName = req.params.name;
+  res.sendFile(fileName, options, function (err) {
+    if (err) {
+      console.log(err);
+      return;
+    } else {
+      console.log("Sent:", fileName);
+    }
+  });
+});
+
+app.listen(port, function (err) {
+  if (err) {
+    console.error("Failure to launch server");
+    return;
+  }
+  console.log(`Listening on port ${port}`);
+});

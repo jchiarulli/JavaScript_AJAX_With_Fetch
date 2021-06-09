@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>fetch, cors, and cookies</title>
+    <style>
+      html {
+        font-size: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        font-weight: 300;
+      }
+      pre {
+        max-width: 80vw;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Working with Fetch, CORS, and Cookies</h1>
+    </header>
+    <main>
+      <p><button id="btnAdd">Add Token Cookie with Fetch</button></p>
+      <p><button id="btnSet">Set Cookie in Browser</button></p>
+      <p><button id="btnDelToken">Delete Token Cookie with Fetch</button></p>
+      <p><button id="btnDelLocal">Delete Token Cookie in Browser</button></p>
+      <p><button id="btnNav">Navigate to second page</button></p>
+      <p id="output"></p>
+    </main>
+    <script>
+      // const baseURL = "http://127.0.0.1:5555"; // same-site
+      // This is the domain on which the cookies will be attatched to
+      // We can set it on this different domain since we're using
+      // mode: "cors" and credentials: "include"
+      // But the script is running on http://127.0.0.1:5555, so it's
+      // only allowed to see cookies on this domain
+      const baseURL = "http://localhost:5555"; // cross-site CORS
+
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("btnAdd").addEventListener("click", fAdd);
+        document.getElementById("btnSet").addEventListener("click", fSet);
+        document.getElementById("btnDelToken").addEventListener("click", fDel);
+        document
+          .getElementById("btnDelLocal")
+          .addEventListener("click", fDelLocal);
+        document.getElementById("btnNav").addEventListener("click", fNav);
+        let pre = document.getElementById("output");
+        //output the current cookies for this domain
+        pre.textContent = document.cookie;
+      });
+
+      //send a request to an API that will create a cookie
+      function fAdd(ev) {
+        let url = `${baseURL}/set`;
+        let req = new Request(url, {
+          mode: "cors", //just a safe-guard indicating our intentions of what to allow
+          credentials: "include", //when will the cookies and authorization header be sent
+        });
+        fetch(req)
+          .then((resp) => {
+            resp.headers.forEach((val, key) => {
+              console.log(key, val);
+            });
+            // Null is what JS sees as the value for the cookie
+            // header even though we're using the same origin
+            // set-cookie is never accessible through the JS
+            // You can never change the value of set-cookie coming
+            // from the server
+            let cookie = resp.headers.get("set-cookie");
+            console.log("set-cookie header value", cookie);
+
+            return resp.json();
+          })
+          .then((data) => {
+            let p = document.getElementById("output");
+            console.log(data.message);
+            p.innerHTML = document.cookie;
+          })
+          .catch((err) => {
+            console.warn(err);
+            document.getElementById("output").textContent = err.message;
+          });
+      }
+
+      //set a cookie in the browser for the current domain
+      // Every time you make a request to a server for a webpage the
+      // cookie gets sent along to server as long as we're talking about
+      // requests that are going to the same domain
+      function fSet(ev) {
+        let key = "score";
+        let value = encodeURIComponent(
+          (Math.floor(Math.random() * 123456) + 123456).toString()
+        );
+        let thirty = 60 * 60 * 24 * 30;
+        document.cookie = `${key}=${value};path=/;max-age=${thirty};`; // one cookie at a time
+        document.getElementById("output").textContent = document.cookie;
+        /**
+        ;path= absolute path. current path by default.
+        ;domain=sub.example.com current domain by default.
+        ;max-age= seconds  60*60*24*30  30 days
+        ;expires= UTC date. end of current session by default  
+        ;secure=true 
+        ;same-site=Strict | Lax
+        **/
+      }
+
+      // Delete function doesn't actually delete the cookie it just
+      // sets it to expire when the function executes
+      // The cookie will be deleted when we close the browser and
+      // reopen the webpage
+      function fDel(ev) {
+        let url = `${baseURL}/delete/token`;
+        let req = new Request(url, {
+          mode: "cors",
+          credentials: "include",
+        });
+        fetch(req)
+          .then((resp) => {
+            //Is there is a set-cookie header?
+            // content-length and content-type are always visible
+            //if Access-Control-Expose-Headers is set to "*" then you can see all except 'set-cookie'
+
+            resp.headers.forEach((val, key) => {
+              console.log(key, val);
+            });
+            let cookie = resp.headers.get("set-cookie");
+            console.log(cookie);
+
+            return resp.json();
+          })
+          .then((data) => {
+            let pre = document.getElementById("output");
+            pre.textContent = data.message;
+            pre.textContent += document.cookie;
+          })
+          .catch((err) => {
+            console.warn(err);
+            document.getElementById("output").textContent = err.message;
+          });
+      }
+
+      function fDelLocal(ev) {
+        let key = "token";
+        let value = "";
+        document.cookie = `${key}=${value};path=/;expires=0;`;
+        document.getElementById("output").textContent = document.cookie;
+        //delete the token cookie associated with the current domain
+      }
+
+      function fNav(ev) {
+        //just go to another page
+        document.location = "./two.html";
+      }
+
+      /**
+       * credentials: "same-origin", "omit", "include"  - cookies, Authorization header
+       *
+       * mode: "cors", "no-cors", "same-origin"
+       *
+       * mode is basically an instruction to the browser that describes the
+       * intention when making fetch calls as follows:
+       * cors - allow browser to make cors calls
+       * no-cors -  don't allow browser to ever make calls that are from
+       * two different origins
+       * same-orgin - allows browser to make a call as long as the fetch
+       * domain is the same as the domain on the domain we're currently on
+       *
+       * default 7 visible headers for CORS requests
+       *        cache-control, content-language, content-length, content-type, expires,
+       *        last_modified, pragma
+       *
+       *        set-cookie and set-cookie2 will NEVER be accessible to JS
+       * **/
+    </script>
+  </body>
+</html>

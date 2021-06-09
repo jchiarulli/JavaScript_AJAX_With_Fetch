@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <!--
+      Combining async await with fetch
+    -->
+  </head>
+  <body>
+    <script>
+      (async function f() {
+        let badurl = "http://";
+        let goodurl = "http://jsonplaceholder.typicode.com/users";
+        let url = Math.round(Math.random()) ? badurl : goodurl;
+
+        // let data = await fetch(url).then(resp => resp.json());
+        let data = await (await fetch(url).catch(handleErr)).json();
+        if (data.code && data.code == 400) {
+          //problem
+          return;
+        }
+        console.log(data);
+      })();
+
+      function handleErr(err) {
+        console.warn(err);
+        let resp = new Response(
+          JSON.stringify({
+            code: 400,
+            message: "Stupid network Error",
+          })
+        );
+        return resp;
+      }
+    </script>
+  </body>
+</html>

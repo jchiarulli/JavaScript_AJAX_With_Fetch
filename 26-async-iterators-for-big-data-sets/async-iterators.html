@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Async Iterators</title>
+    <meta name="viewport" content="width=device-width" />
+    <style></style>
+  </head>
+  <body>
+    <header>
+      <h1>Async Iterators</h1>
+      <h2>Handling Data Streams</h2>
+    </header>
+    <main>
+      <p>
+        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Nobis, iure
+        veniam reprehenderit quo et natus perferendis, modi nostrum facere
+        similique aliquid maxime, consectetur facilis. Mollitia labore sapiente
+        natus cumque est.
+      </p>
+      <pre id="output"></pre>
+    </main>
+    <script>
+      //https://jsonplaceholder.typicode.com/posts
+      //retrieves 100 records
+      //let's pretend that there are millions of records
+
+      let posts = {};
+      posts[Symbol.iterator] = function () {
+        const URL = "//jsonplaceholder.typicode.com/posts";
+        return {
+          next: async function () {
+            //early pre-emptive move
+            let rand = Math.random();
+            if (rand > 0.7) {
+              return {
+                value: undefined,
+                done: true,
+              };
+            }
+            let request = new Request(URL + `?r=${rand}`, {
+              method: "GET",
+              mode: "cors",
+            });
+
+            let response = await fetch(request);
+            //need to add catch()
+            let data = await response.json();
+            console.log("array of posts fetched", data);
+            return {
+              value: data,
+              done: false,
+            };
+          },
+        };
+      };
+
+      let output = document.getElementById("output");
+      let main = document.querySelector("main");
+      main.addEventListener("click", d);
+
+      // need to call the next function in a way that's going to await
+      // at the time of this video you couldn't use a for of loop and
+      // make it await
+      // Check if that's possible now
+      function d(ev) {
+        //start getting data
+        //output.textContent += JSON.stringify(d);
+        let iterator = posts[Symbol.iterator]();
+
+        (async function getData() {
+          let data = await iterator.next();
+          if (data.value && !data.done) {
+            output.textContent += "\r\n" + JSON.stringify(data.value);
+            console.log("getData", data.value);
+            setTimeout(getData, 2000);
+          } else {
+            console.log("Done:", data.done);
+            output.textContent += "\r\n DONE.";
+          }
+        })();
+        // IIFE
+        // for await( let val of obj){ }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Base-64</title>
+    <meta name="viewport" content="width=device-width" />
+    <!-- <link rel="stylesheet" href="../video-pages/main.css" /> -->
+    <style>
+      /**
+        Did you know...
+        You can use base-64 strings to create background
+        images in CSS!
+        **/
+      output {
+        font-family: monospace;
+        background-color: #eee;
+        color: #333;
+        padding: 1rem;
+        margin: 1rem 0;
+        display: block;
+        word-break: break-all;
+      }
+      canvas {
+        border: 1px solid red;
+      }
+      img {
+        margin: 1rem;
+      }
+      .FileReader {
+        /* from file input */
+        border: 3px solid blue;
+      }
+      .createObjectURL {
+        /* from file input */
+        border: 3px solid gold;
+      }
+      .canvas {
+        border: 3px solid green;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Everything you didn't want to know about Base-64</h1>
+    </header>
+    <main>
+      <p>
+        All your data is broken up into 3-byte groups. With 8 bits per byte that
+        makes 24 bits in each group. Each 24 bits of data is then turned into
+        groups of 4 x 6 bits.
+      </p>
+      <p>
+        If we end up with a group at the end of the data stream that only has
+        one or two bytes then it gets padded with zeros. These padding zeros
+        will be represented with the equal sign <code>=</code> character.
+      </p>
+      <p>
+        111111 would be the largest number you could make with 6 bits. That
+        value, in decimal, is 63. So there are 64 different values. They are
+        represented with the following characters.
+      </p>
+      <pre> A-Z     a-z     0-9     +     / </pre>
+      <pre> 0-25    26-51   52-61   62    63</pre>
+      <output id="out"> </output>
+      <form>
+        <input type="file" accepts="image/*" id="imgInput" />
+      </form>
+      <canvas id="canvas" width="200" height="200"></canvas>
+    </main>
+    <script>
+      // The size of the base-64 string will be larger than the binary
+      // data, but if you're doing something that prevents you from
+      // working with a file you can take the images convert them to
+      // base-64 and take the base-64 string and put it inside a text file
+      // like HTML, JSON, XML, txt, etc.
+      // Then you can do whatever you need to with the string
+      let out = document.getElementById("out");
+      // num.toString(radix) - only up to base 36
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString
+      let num = 17;
+      out.innerHTML += "17 in hexadecimal is " + num.toString(16) + "<br/>";
+      out.innerHTML += "17 in base-36 is " + num.toString(36) + "<br/>";
+
+      //from a string to base-64
+      // window.btoa(unescape(encodeURIComponent(str)));
+      //from base-64 to a string
+      // decodeURIComponent(escape(window.atob(encoded value)));
+      // https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/btoa#Unicode_Strings
+      // https://developer.mozilla.org/en-US/docs/Web/API/WindowBase64/Base64_encoding_and_decoding#Solution_.232_.E2.80.93_rewriting_atob()_and_btoa()_using_TypedArrays_and_UTF-8
+
+      try {
+        // results in an error since btoa cannot support unicode characters
+        // because the emoji falls out of the characters in the Latin 1 range
+        let str = btoa("abc🤔");
+        out.innerHTML += str + " is abc🤔 in base-64.</br>";
+      } catch (err) {
+        out.innerHTML += "ERROR. " + err.message + "<br/>";
+        // instead we have to encode the uri to get certain characters, unescape
+        // it to get rid of slashes, and then we can do the btoa
+        // you can do the reverse as well using atob
+        let str2 = btoa(unescape(encodeURIComponent("abc🤔")));
+        out.innerHTML += str2 + " is abc🤔 in base-64.</br>";
+      }
+      // input type="file" +
+      // files[0].name +
+      // URL.createObjectURL()
+      // fileReader.readAsDataURL( )
+      // https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL
+      // https://developer.mozilla.org/en-US/docs/Web/API/FileReader/readAsDataURL
+      let imgTemp = document.createElement("img");
+      imgTemp.src = "profilePic.jpg";
+
+      let input = document.getElementById("imgInput");
+      input.addEventListener("change", (ev) => {
+        let file = ev.target.files[0];
+        //VERSION ONE
+        if (file) {
+          // gives a blob (binary large object) url which is a unique url that points to the file
+          let nm = window.URL.createObjectURL(file);
+          out.innerHTML += "BLOB URL:<br/>" + nm + "<br/>";
+          let img = document.createElement("img");
+          img.addEventListener("load", (ev) => {
+            //then clear up the memory
+            // that was used to create the blob url
+            URL.revokeObjectURL(nm);
+          });
+          img.src = nm;
+          img.classList.add("createObjectURL");
+          document.querySelector("main").appendChild(img);
+        }
+
+        //VERSION TWO
+        // Converts the file from binary into a base-64 string
+        let reader = new FileReader();
+        reader.addEventListener("load", (ev) => {
+          let img1 = document.createElement("img");
+          // Uses the base-64 string as the source for the image
+          // Starts with data: which signifies it's a data uri
+          // Images are capable of using data uri's to display images
+          // Then shows the file type which is image/jpeg
+          // Then shows base64
+          // Finally shows the base64 string representation
+          // Could use the encodeURIComponent method on the base64 string
+          // and insert it into an XML file or a JSON file and submit the
+          // result to a server as part of the form without worrying about
+          // the binary data
+          // Have to perform the URI encoding to handle the + signs present
+          // in the base-64 string because when data is being passed
+          // through an HTTP request the url encoding wants to turn the
+          // + signs into spaces which will break the encoding
+          // When we get it back from the server we'll use the URI decoding
+          // method to get it back with the + signs
+          img1.src = ev.currentTarget.result;
+          img1.classList.add("FileReader");
+
+          out.innerHTML +=
+            "Base64 String from FileReader<br/>" +
+            ev.currentTarget.result +
+            "<br/>";
+          document.querySelector("main").appendChild(img1);
+        });
+        reader.readAsDataURL(file);
+
+        // HTML5 Canvas for images
+        // We're creating an HTML5 canvas element by placing an image
+        // from the local directory into the canvas which is then
+        // being exported as a base-64 string which is displayed using
+        // using an image tag
+        // canvas.toDataURL(type, encoderOptions);
+        //https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL
+        let canvas = document.getElementById("canvas");
+        // Need to get the context of the canvas to place an image on it
+        let context = canvas.getContext("2d");
+
+        context.drawImage(imgTemp, 0, 0, 128, 128);
+        //get the image from the canvas as a base64 string
+        // faster than the toBlob method which requires a callback function
+        let canvas64 = canvas.toDataURL();
+        out.innerHTML += "Base64 String from Canvas<br/>" + canvas64 + "<br/>";
+        let img2 = document.createElement("img");
+        img2.classList.add("canvas");
+        img2.src = canvas64;
+        document.querySelector("main").appendChild(img2);
+
+        //get the image from the canvas as a blob
+        let canvasblob = canvas.toBlob(
+          // runs when the toBlob method has finsihed by using the
+          // returned blob data
+          (theblob) => {
+            let blobURL = URL.createObjectURL(theblob);
+            out.innerHTML += "Blob from Canvas<br/>" + blobURL + "<br/>";
+            img2.onload = function () {
+              // no longer need to read the blob so it's revoked
+              URL.revokeObjectURL(blobURL);
+            };
+          },
+          "image/jpeg",
+          0.8
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>FormData Objects</title>
+  </head>
+
+  <body>
+    <div id="output">
+      <pre></pre>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Added as a way for people to bundle data that was being sent
+        // to the server
+        // As it became more common for people to not write an html form
+        // with the form tag and the action and then submit that to the
+        // server
+        // Instead it became more common to write a JS object then do an
+        // XmlHttpRequest or a fetch request to send the data
+        // So, there was a need to create a way to bundle the data
+        // Replication of what a form does
+        // It's basically an array of arrays
+        let fd = new FormData();
+        fd.append("name", "Bubba");
+        fd.append("id", 1234);
+        fd.append("created_dt", Date.now());
+
+        // Convert the form data object into an array because the
+        // Array.from method allows us to convert any iterable to an
+        // array
+        console.log(Array.from(fd));
+
+        for (let obj of fd) {
+          console.log(obj);
+        }
+
+        document.querySelector("#output pre").textContent = JSON.stringify(
+          Array.from(fd),
+          "\t",
+          2
+        );
+        // let url = 'http://www.example.com/';
+        // let req = new Request({
+        //     url: url,
+        //     body: fd
+        // })
+        // fetch(req)
+        // .then(response => response.json() )
+        // .then( data => {})
+        // .catch( err => {})
+      });
+    </script>
+  </body>
+</html>
